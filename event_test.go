@@ -1,3 +1,4 @@
+//go:build !binary_log
 // +build !binary_log
 
 package zerolog
@@ -5,6 +6,7 @@ package zerolog
 import (
 	"bytes"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -62,4 +64,26 @@ func TestEvent_EmbedObjectWithNil(t *testing.T) {
 	if got != want {
 		t.Errorf("Event.EmbedObject() = %q, want %q", got, want)
 	}
+}
+
+func TestEvent_MsgNoPrint(t *testing.T) {
+	_ = os.Setenv("ZEROLOG_NO_HOOKS", "true")
+	defer os.Unsetenv("ZEROLOG_NO_HOOKS")
+	log := New(os.Stdout)
+
+	subLogger := log.Level(InfoLevel).With().Timestamp().Logger()
+	event := subLogger.Info()
+	event.Msg("hello world")
+
+	// Output: {"message":"hello world"}
+}
+
+func TestEvent_MsgWithPrint(t *testing.T) {
+	log := New(os.Stdout)
+
+	subLogger := log.Level(InfoLevel).With().Timestamp().Logger()
+	event := subLogger.Info()
+	event.Msg("hello world")
+
+	// Output: {"level":"info","time":"2024-11-19T18:19:40+08:00","message":"hello world"}
 }

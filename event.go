@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -14,6 +15,7 @@ var eventPool = &sync.Pool{
 	New: func() interface{} {
 		return &Event{
 			buf: make([]byte, 0, 500),
+			npl: strings.EqualFold(os.Getenv("ZEROLOG_NO_HOOKS"), "true"),
 		}
 	},
 }
@@ -21,6 +23,7 @@ var eventPool = &sync.Pool{
 // Event represents a log event. It is instanced by one of the level method of
 // Logger and finalized by the Msg or Msgf method.
 type Event struct {
+	npl       bool
 	buf       []byte
 	w         LevelWriter
 	level     Level
@@ -139,8 +142,10 @@ func (e *Event) MsgFunc(createMsg func() string) {
 }
 
 func (e *Event) msg(msg string) {
-	for _, hook := range e.ch {
-		hook.Run(e, e.level, msg)
+	if !e.npl {
+		for _, hook := range e.ch {
+			hook.Run(e, e.level, msg)
+		}
 	}
 	if msg != "" {
 		e.buf = enc.AppendString(enc.AppendKey(e.buf, MessageFieldName), msg)
